@@ -300,21 +300,6 @@ class Swarm():
 					self.Y[ind] = np.vstack((self.Y[ind],self.curr_Y[ind, :]))
 					
 				self.data_window[ind].pop(0)
-				
-			
-				
-			'''
-			########################
-			from scipy.stats import zscore
-
-			for ind in range(0,self.N):
-				for col in range(0,self.X[ind].shape[1]):
-					curr_min = np.min(self.X[ind][:,col])
-					curr_max = np.max(self.X[ind][:,col])
-					self.X[ind][:,col] = (self.X[ind][:,col] - curr_min) / (curr_max - curr_min)
-			
-			########################
-			'''
 			
 		
 	######################
@@ -498,18 +483,3 @@ class Swarm():
 
 		self.swarm_variance = np.asarray([swarm_var, swarm_var, swarm_var])
 		return self.swarm_variance
-
-
-
-
-
-# Going to need these later. For now, assuming fully connected G so
-# don't need them really. 
-def index_from_spatial(x, y, z, s):
-	return x + y*s + z*(s*s)
-
-def spatial_from_index(n, s):
-	z = math.floor(n / (s*s))
-	y = math.floor((n/s) - z*(s*s))
-	x = n - y*s - z*s*s
-	return [x,y,z]

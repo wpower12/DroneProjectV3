@@ -13,16 +13,10 @@ class MultiSwarmSim():
         self.prng = np.random.RandomState(rnd_seed)
         self.swarms = SC.SwarmCollection(self.prng)
 
-        self.swarms.addSwarms(swarms_options)
+        self.swarms.add_swarms(swarms_options)
         self.swarms.generate_animator(figname)
 
         self.wind = W.Wind(self.prng)
-
-        self.did_colision_avoidance = False
-        self.post_colision_avoidance_timer = C.WINDOW_SIZE
-
-        self.saved_last_swarm_pos_estimates =[]
-        self.delta_vec = None
 
     def set_seed(self, n):
         self.wind.set_seed(n)
@@ -32,10 +26,6 @@ class MultiSwarmSim():
         self.wind.sample_wind()
         for s in self.swarms.swarms:
             s.tick(self.wind)
-
-        self.swarms.resolvePotentialCollisions()
-
-
 
     def start_inference(self, use_model=True):
         for s in self.swarms.swarms:
