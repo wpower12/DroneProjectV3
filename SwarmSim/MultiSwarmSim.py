@@ -24,6 +24,11 @@ class MultiSwarmSim():
     def tick(self):
         self.swarms.animate_current_state()
         self.wind.sample_wind()
+
+        wind_dev = self.wind.get_wind_vec() * C.DT
+        if self.wind.gusting:
+            self.swarms.move_swarms(wind_dev)
+
         for s in self.swarms.swarms:
             s.tick(self.wind)
 

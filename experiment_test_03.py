@@ -8,6 +8,8 @@ import warnings
 
 warnings.filterwarnings("ignore")
 
+# [Number of drones, Color, StartPoint, EndPoint, UsingStructure]
+# Color = [ColorInTrain, ColorInInference]
 swarm1 = [4, 'planar', ['b', 'r'], [0, 0, 0], [13, 13, 13], None]
 swarm2 = [4, 'planar',  ['g', 'xkcd:orange'], [13, 13, 13], [0, 0, 0], None]
 multiswarm_options = [swarm1, swarm2]

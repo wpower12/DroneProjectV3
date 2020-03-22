@@ -51,3 +51,10 @@ class SwarmCollection():
         if C.ANIMATE and self.animator is not None:
             self.animator.plot_swarms(self.swarms)
 
+    def move_swarms(self, shift_vec, weights=None):
+        if weights is None:
+            weights = np.ones((len(self.swarms), 3))
+        for index, s in enumerate(self.swarms):
+            s.move_swarm([shift_vec[0]*weights[index][0], shift_vec[1]*weights[index][1], shift_vec[2] * weights[index][2]])
+
+
