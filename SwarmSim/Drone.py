@@ -38,9 +38,6 @@ class Drone():
         self.H_pos = []
         self.H_pos_estimate = []
         self.swarm_index = None
-        # Models/External State
-        # self.others_pos    = [] # last known pos of other drones
-        # self.others_models = [] # model parameters for other drones
 
     def move_drone(self, shift_vec, weights=None):
         if weights is None:

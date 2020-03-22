@@ -65,22 +65,17 @@ class GCRFModel():
         self.all_weak_learners = []
         self.thetas = []
 
-    def train_single_GCRF(self, S_unfolded, X, Y, use_structure):
+    def train_single_GCRF(self, data_frame, use_structure): #S_unfolded, X, Y, use_structure):
 
-        # print('==== train() ====')
-        # print(S.shape)
-        # print(X.shape)
-        # print(Y.shape)
-
-        self.D = len(X)
-        self.d_out = Y[0].shape[1]
-        self.T = X[0].shape[0]
+        self.D = len(data_frame.X)
+        self.d_out = data_frame.Y[0].shape[1]
+        self.T = data_frame.X[0].shape[0]
         K = 1
 
         weak_learners = []
         for ind in range(0, self.D):
             weak_learners.append(MyMultiOutputRegressor(self.d_out, self.rnd_state))
-            weak_learners[-1].fit(X[ind], Y[ind])
+            weak_learners[-1].fit(data_frame.X[ind], data_frame.Y[ind])
 
         self.all_weak_learners.append(weak_learners)
 
@@ -90,21 +85,16 @@ class GCRFModel():
 
             R_unfolded = np.zeros((self.T * self.D, self.d_out), dtype=float)
             for ind in range(0, self.D):
-                preds = weak_learners[ind].predict(X[ind])
+                preds = weak_learners[ind].predict(data_frame.X[ind])
                 for t in range(0, self.T):
                     R_unfolded[t * self.D + ind, :] = preds[t, :]
 
             Y_unfolded = np.zeros((self.T * self.D, self.d_out), dtype=float)
             for ind in range(0, self.D):
                 for t in range(0, self.T):
-                    Y_unfolded[t * self.D + ind, :] = Y[ind][t, :]
+                    Y_unfolded[t * self.D + ind, :] = data_frame.Y[ind][t, :]
 
-            # S_unfolded = flatten_S(S)
-
-            # Temporal GCRF training
-            # print('Temporal GCRF training ...')
-
-            S_unfolded = (S_unfolded / sum(sum(S_unfolded))) * S_unfolded.shape[0]
+            S_unfolded = (data_frame.S / sum(sum(data_frame.S))) * data_frame.S.shape[0]
             L_unfolded = np.diag(sum(S_unfolded)) - S_unfolded
 
             # Initialize params
@@ -122,25 +112,25 @@ class GCRFModel():
             self.thetas.append(res.x)
 
 
-    def train(self, S_unfolded, X, Y, use_structure):
+    def train(self, data_frame, use_structure):
 
         for m in range(self.M):
-            self.train_single_GCRF(S_unfolded, X, Y, use_structure)
+            self.train_single_GCRF(data_frame, use_structure)
 
 
 
 
-    def predict_single_GCRF(self, X, S, use_structure, gcrf_ind):
+    def predict_single_GCRF(self, data_frame, use_structure, gcrf_ind):
 
         # pred = self.weak_learners[d_ind].predict( X[d_ind].reshape(1,-1) )
         # dim_out = pred.shape[1]
         # pred = pred.reshape(dim_out)
         # return pred
 
-        R = np.zeros((X.shape[0], self.d_out), dtype=float)
+        R = np.zeros((data_frame.curr_X.shape[0], self.d_out), dtype=float)
 
         for ind in range(0, self.D):
-            pred = self.all_weak_learners[gcrf_ind][ind].predict(X[ind, :].reshape(1, -1))
+            pred = self.all_weak_learners[gcrf_ind][ind].predict(data_frame.curr_X[ind, :].reshape(1, -1))
             R[ind, :] = pred
 
         if not use_structure:
@@ -149,10 +139,10 @@ class GCRFModel():
         # =========================================================================
 
         # mu <- GCRF_PREDICT(theta, S, R)
-        N = S.shape[0]
+        N = data_frame.curr_S.shape[0]
         K = 1
 
-        S = (S / sum(sum(S))) * N
+        S = (data_frame.curr_S / sum(sum(data_frame.curr_S))) * N
         L = np.diag(sum(S)) - S
 
         alpha = self.thetas[gcrf_ind][0:K]
@@ -168,11 +158,11 @@ class GCRFModel():
         return mu
 
 
-    def predict(self, X, S, use_structure):
+    def predict(self, data_frame, use_structure):
 
-        preds = np.zeros((X.shape[0], self.d_out, self.M), dtype=float)
+        preds = np.zeros((data_frame.curr_X.shape[0], self.d_out, self.M), dtype=float)
         for m in range(self.M):
-            preds[:,:,m] = self.predict_single_GCRF(X, S, use_structure, m)
+            preds[:,:,m] = self.predict_single_GCRF(data_frame, use_structure, m)
         pred_means = np.mean(preds, axis=2)
         pred_stds = np.std(preds, axis=2)
         return pred_means, pred_stds
