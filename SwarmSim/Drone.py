@@ -4,6 +4,12 @@ from . import constants as C
 
 
 class Drone():
+    u = np.linspace(0, 2 * np.pi, 20)  # 100)
+    v = np.linspace(0, np.pi, 20)  # 100)
+    var_x_factor = np.outer(np.cos(u), np.sin(v))
+    var_y_factor = np.outer(np.sin(u), np.sin(v))
+    var_z_factor = np.outer(np.ones(np.size(u)), np.cos(v))
+
     def __init__(self, start_position=None):
         # State Vectors
         if start_position is None:
@@ -15,9 +21,8 @@ class Drone():
             self.pos_initial = self.pos
             self.target = self.pos
 
-        self.pos_estimate = np.zeros((3))  # Estimated via deadreckoning
+        self.pos_estimate = np.zeros((3))  # Model estimate in inference
         self.pos_variance = np.zeros((3))
-        self.pos_estimate_animate = np.zeros((3))
 
         self.vel = np.zeros((3))  # Velocity based on self.pos
         self.vel_estimate = np.zeros((3))  # Velocity based on self.pos_estimate
@@ -38,6 +43,10 @@ class Drone():
         self.H_pos = []
         self.H_pos_estimate = []
         self.swarm_index = None
+
+        # Drawing colors
+        self.train_color = 'b'
+        self.inference_color = 'r'
 
     def move_drone(self, shift_vec, weights=None):
         if weights is None:
@@ -60,16 +69,16 @@ class Drone():
         self.PID_Y_estimate = PID(C.PID_P, C.PID_I, C.PID_D, setpoint=y, sample_time=None)
         self.PID_Z_estimate = PID(C.PID_P, C.PID_I, C.PID_D, setpoint=z, sample_time=None)
 
-    def update_state_from_pos(self, pos):
+    def update_state_from_pos(self):
         # Update output limits manually so that we wouldn't clamp the last integral and the last output value
         self.PID_X.output_limits = (-1.0 * C.MAX_ACC - self.acc[0], C.MAX_ACC - self.acc[0])
         self.PID_Y.output_limits = (-1.0 * C.MAX_ACC - self.acc[1], C.MAX_ACC - self.acc[1])
         self.PID_Z.output_limits = (-1.0 * C.MAX_ACC - self.acc[2], C.MAX_ACC - self.acc[2])
 
         # Changes in acc are the outputs of the PID controllers
-        dAcc_x = self.PID_X(pos[0], dt=C.DT)
-        dAcc_y = self.PID_Y(pos[1], dt=C.DT)
-        dAcc_z = self.PID_Z(pos[2], dt=C.DT)
+        dAcc_x = self.PID_X(self.pos[0], dt=C.DT)
+        dAcc_y = self.PID_Y(self.pos[1], dt=C.DT)
+        dAcc_z = self.PID_Z(self.pos[2], dt=C.DT)
 
         # Update acc's by clamp adding differences in acceleration (previously clamped by setting output_limits)
         self.acc = np.asarray([self.acc[0] + dAcc_x, self.acc[1] + dAcc_y, self.acc[2] + dAcc_z])
@@ -87,16 +96,16 @@ class Drone():
         else:
             self.vel = -np.asarray([1.0, 1.0, 1.0])
 
-    def update_state_from_pos_estimate(self, pos_estimate):
+    def update_state_from_pos_estimate(self):
         # Update output limits manually so that we wouldn't clamp the last integral and the last output value
         self.PID_X_estimate.output_limits = (-1.0 * C.MAX_ACC - self.acc_estimate[0], C.MAX_ACC - self.acc_estimate[0])
         self.PID_Y_estimate.output_limits = (-1.0 * C.MAX_ACC - self.acc_estimate[1], C.MAX_ACC - self.acc_estimate[1])
         self.PID_Z_estimate.output_limits = (-1.0 * C.MAX_ACC - self.acc_estimate[2], C.MAX_ACC - self.acc_estimate[2])
 
         # Changes in acc are the outputs of the PID controllers
-        dAcc_x = self.PID_X_estimate(pos_estimate[0], dt=C.DT)
-        dAcc_y = self.PID_Y_estimate(pos_estimate[1], dt=C.DT)
-        dAcc_z = self.PID_Z_estimate(pos_estimate[2], dt=C.DT)
+        dAcc_x = self.PID_X_estimate(self.pos_estimate[0], dt=C.DT)
+        dAcc_y = self.PID_Y_estimate(self.pos_estimate[1], dt=C.DT)
+        dAcc_z = self.PID_Z_estimate(self.pos_estimate[2], dt=C.DT)
 
         # Update acc's by clamp adding differences in acceleration (previously clamped by setting output_limits)
         self.acc_estimate = np.asarray(
@@ -116,56 +125,65 @@ class Drone():
             self.vel = -np.asarray([1.0, 1.0, 1.0])
 
     def update_training(self):
-        self.update_state_from_pos(self.pos)
+        self.update_state_from_pos()
         self.pos_estimate = np.copy(self.pos)
-        self.pos_estimate_animate = np.copy(self.pos)
 
         self.pos += self.vel * C.DT
         self.H_pos.append(np.copy(self.pos))
 
-        self.update_state_from_pos_estimate(self.pos_estimate)
+        self.update_state_from_pos_estimate()
         self.pos_estimate += self.vel_estimate * C.DT
-        self.pos_estimate_animate += self.vel_estimate * C.DT
 
-        self.H_pos_estimate.append(np.copy(self.pos_estimate))
+        #self.H_pos_estimate.append(np.copy(self.pos_estimate)) # Don't want to draw the whole path in inference
 
     def update_inference(self, vel_included_in_prediction=False):
         # Update ground truth
-        self.update_state_from_pos(self.pos)
+        self.update_state_from_pos()
         self.pos += self.vel * C.DT
         self.H_pos.append(np.copy(self.pos))
 
         # Move predicted positions (usually only when DR is used)
         if not vel_included_in_prediction:
-            self.update_state_from_pos_estimate(self.pos_estimate)
+            self.update_state_from_pos_estimate()
             self.pos_estimate += self.vel_estimate * C.DT
 
-    def has_reached_target(self, epsilon):
-        # return true if distance to target is within epsilon
-        return abs(np.linalg.norm(self.pos_estimate - self.target)) < epsilon
+        self.H_pos_estimate.append(np.copy(self.pos_estimate))
 
-    def getVelocityVariance(self):
-        n_steps = len(self.H_pos)
-        n_inference = len(self.H_pos_estimate)
-        if n_inference == 0:
-            return np.zeros(3, dtype=float)
-        n_train = n_steps - n_inference
-        Hpos = np.asarray(self.H_pos)
-        Hpos_estimate = np.asarray(self.H_pos_estimate)
-        movement_diffs = np.zeros((n_steps - 1, 3), dtype=float)
-        movement_diffs[:n_train - 1, 0] = np.ediff1d(Hpos[:n_train, 0])
-        movement_diffs[:n_train - 1, 1] = np.ediff1d(Hpos[:n_train, 1])
-        movement_diffs[:n_train - 1, 2] = np.ediff1d(Hpos[:n_train, 2])
+    def set_plot_colors(self, color):
+        self.train_color = color[0]
+        self.inference_color = color[1]
 
-        # weighted std https://stackoverflow.com/questions/2413522/weighted-standard-deviation-in-numpy
+    def plot_path(self, ax, plot_model_trajectory=True):
+        x, y, z = self.pos
+        ax.plot([x], [y], [z], color=self.train_color, marker='.', label='', markersize=C.MARKERSIZE)
 
-        # border case
-        movement_diffs[n_train - 1, :] = Hpos_estimate[0, :] - Hpos[n_train - 1, :]
+        if len(self.H_pos) > 0:
+            s_hist = np.vstack(self.H_pos)
+            ax.plot(s_hist[:, 0], s_hist[:, 1], s_hist[:, 2], color=self.train_color, linestyle=':', label='',
+                    markersize=C.MARKERSIZE, alpha=C.PATH_TRANSPARENCY)
 
-        movement_diffs[n_train:, 0] = np.ediff1d(Hpos_estimate[:, 0])
-        movement_diffs[n_train:, 1] = np.ediff1d(Hpos_estimate[:, 1])
-        movement_diffs[n_train:, 2] = np.ediff1d(Hpos_estimate[:, 2])
-        return np.std(movement_diffs, axis=0)
+        if plot_model_trajectory:  # If in inference:
+            x, y, z = self.pos_estimate
+
+            ax.plot([x], [y], [z], color=self.inference_color, marker='.', label='',
+                    markersize=C.MARKERSIZE)
+
+            if len(self.H_pos_estimate) > 0:
+                s_hist = np.vstack(self.H_pos_estimate)
+                ax.plot(s_hist[:, 0], s_hist[:, 1], s_hist[:, 2], color=self.inference_color, linestyle=':',
+                        label='', markersize=C.MARKERSIZE, alpha=C.PATH_TRANSPARENCY)
+            # self.plot_drone_variance(ax)
+
+    def plot_drone_variance(self, ax):
+        x, y, z = self.pos_estimate
+        std_x, std_y, std_z = self.pos_variance
+        if self.pos_variance[0] > 0:
+            # Plot the prediction uncertainty (variance)
+            var_x = 3 * std_x * self.var_x_factor
+            var_y = 3 * std_y * self.var_y_factor
+            var_z = 3 * std_z * self.var_z_factor
+            # Plot the surface
+            ax.plot_surface(var_x + x, var_y + y, var_z + z, color=self.inference_color, alpha=C.DRONE_VARIANCE_TRANSPARENCY)
 
 
 # Returns a value that is max(abs(max_a), abs(a+b))

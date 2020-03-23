@@ -10,6 +10,12 @@ from . import PositionsHistoryDataFrame
 
 
 class Swarm():
+    u = np.linspace(0, 2 * np.pi, 20)  # 100)
+    v = np.linspace(0, np.pi, 20)  # 100)
+    var_x_factor = np.outer(np.cos(u), np.sin(v))
+    var_y_factor = np.outer(np.sin(u), np.sin(v))
+    var_z_factor = np.outer(np.ones(np.size(u)), np.cos(v))
+
     def __init__(self, swarm_options):
         # swarm_options = [num_drones, swarm_shape, [color_train, color_inference], start_pt, end_pt, use_structure]:
         self.N, self.shape, self.color, self.start_pt, self.end_pt, self.use_structure = swarm_options
@@ -84,7 +90,7 @@ class Swarm():
         # Data Gathering/Model Training
         if self.use_structure is not None and self.training:
 
-            if self.timestep == C.NUM_TRAINING_STEPS - 1: # >= C.NUM_TRAINING_STEPS - 1 to train each inf timestep
+            if self.timestep == C.NUM_TRAINING_STEPS - 1:  # >= C.NUM_TRAINING_STEPS - 1 to train each inf timestep
                 self.model.train(self.data_frame, self.use_structure)
                 # print('theta:', self.model.theta)
 
@@ -147,7 +153,31 @@ class Swarm():
         else:
             return np.asarray([d.pos_estimate for d in self.drones])
 
-#####
+    def plot_swarm(self, ax):
+        for d in self.drones:
+            d.set_plot_colors(self.color)
+            if self.training:
+                d.plot_path(ax, plot_model_trajectory=False)
+            else:
+                d.plot_path(ax, plot_model_trajectory=True)
+
+    def plot_swarm_variance(self, ax):
+        if not self.training:
+            xyz_swarm_variance = self.calculateSwarmVariance3()
+            if not np.allclose(xyz_swarm_variance, np.zeros(3, dtype=float)):
+                # var_x = xyz_swarm_variance[0]*self.var_x_factor
+                # var_y = xyz_swarm_variance[1]*self.var_y_factor
+                # var_z = xyz_swarm_variance[2]*self.var_z_factor
+                max_var = np.max([xyz_swarm_variance])
+
+                var_x = max_var * self.var_x_factor
+                var_y = max_var * self.var_y_factor
+                var_z = max_var * self.var_z_factor
+
+                ax.plot_surface(var_x + self.swarm_mean[0], var_y + self.swarm_mean[1],
+                                var_z + self.swarm_mean[2], color=self.color[1], alpha=C.SWARM_VARIANCE_TRANSPARENCY)
+
+    #####
     def per_drone_wind_multipliers(self, wind_vector, layer_wind_multiplier=0.9):
         drone_position_matrix = np.asarray([[d.pos[0], d.pos[1]] for d in self.drones])
         wind_vec_orth = np.asarray([-wind_vector[1], wind_vector[0]])
@@ -164,8 +194,10 @@ class Swarm():
             no_exposed_current_layer = 0
 
             hull = ConvexHull(drone_position_matrix[:self.N - no_drones_covered, 0:2])
-            projections = np.matmul(drone_position_matrix[hull.vertices, 0:2], wind_vector[:2]) / np.linalg.norm(wind_vector[:2])
-            projections_orth = np.matmul(drone_position_matrix[hull.vertices, 0:2], wind_vec_orth) / np.linalg.norm(wind_vec_orth)
+            projections = np.matmul(drone_position_matrix[hull.vertices, 0:2], wind_vector[:2]) / np.linalg.norm(
+                wind_vector[:2])
+            projections_orth = np.matmul(drone_position_matrix[hull.vertices, 0:2], wind_vec_orth) / np.linalg.norm(
+                wind_vec_orth)
 
             sorted_proj_indexes = np.argsort(projections)
             sorted_proj_orth_indexes = np.argsort(projections_orth)
@@ -185,7 +217,8 @@ class Swarm():
             sorted_indexes = np.sort(hull.vertices[exposed_hull])
             for i in range(1, no_exposed_current_layer + 1):
                 row = sorted_indexes[-i]
-                drone_position_matrix[[self.N - no_drones_covered - i, row]] = drone_position_matrix[[row, self.N - no_drones_covered - i]]
+                drone_position_matrix[[self.N - no_drones_covered - i, row]] = drone_position_matrix[
+                    [row, self.N - no_drones_covered - i]]
 
             no_drones_covered += no_exposed_current_layer
             wind_fact = wind_fact * layer_wind_multiplier
@@ -258,7 +291,7 @@ class Swarm():
 
         dists = np.zeros((self.N,), dtype=float)
         for i, d in enumerate(self.drones):
-            dists[i] = np.linalg.norm(self.swarm_mean - d.pos_estimate) # - d.pos_estimate_animate
+            dists[i] = np.linalg.norm(self.swarm_mean - d.pos_estimate)  # - d.pos_estimate_animate
 
         max_index = np.argmax(dists)
         swarm_var = dists[max_index] + np.max(self.drones[max_index].pos_variance)
