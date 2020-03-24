@@ -24,6 +24,8 @@ class SwarmCollection():
         swarm.generate_model(prng=self.prng)
 
         self.update_lower_limits(start_pt=swarmOptions[3])
+        self.update_lower_limits(start_pt=swarmOptions[4])
+        self.update_upper_limits(end_pt=swarmOptions[3])
         self.update_upper_limits(end_pt=swarmOptions[4])
 
         self.swarms.append(swarm)
@@ -81,3 +83,7 @@ class SwarmCollection():
         plt.xlim(self.lower_limit[0], self.upper_limit[0])
         plt.ylim(self.lower_limit[1], self.upper_limit[1])
         ax.set_zlim(self.lower_limit[2], self.upper_limit[2])
+
+    def train(self):
+        for s in self.swarms:
+            s.train()

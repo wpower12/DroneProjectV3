@@ -10,8 +10,8 @@ warnings.filterwarnings("ignore")
 
 # [Number of drones, Color, StartPoint, EndPoint, UsingStructure]
 # Color = [ColorInTrain, ColorInInference]
-swarm1 = [4, 'planar', ['b', 'r'], [0, 0, 0], [13, 13, 13], None]
-swarm2 = [4, 'planar',  ['g', 'xkcd:orange'], [13, 13, 13], [0, 0, 0], None]
+swarm1 = [4, 'planar', ['b', 'r'], [2, 0, 0], [13, 13, 13], None]
+swarm2 = [4, 'planar',  ['g', 'xkcd:orange'], [12, 13, 13], [0, 0, 0], None]
 multiswarm_options = [swarm1, swarm2]
 
 
@@ -75,15 +75,8 @@ for n in range(C.NUM_RUNS):
     np.random.seed = rnd_seed
     sim = MultiSwarmSim(multiswarm_options, rnd_seed, 'Temporal GCRF')
     sim.set_seed(rnd_seed)
-    for i in range(C.NUM_TRAINING_STEPS):
+    for i in range(C.NUM_TRAINING_STEPS+C.NUM_INFERENCE_STEPS):
         sim.tick()
-
-    # starting inference with TRUE means we use the model
-    sim.start_inference(True)
-    for i in range(C.NUM_INFERENCE_STEPS):
-        sim.tick()
-
-    print('\n\n')
 
 
 print('Done!')

@@ -124,6 +124,18 @@ class Drone():
         else:
             self.vel = -np.asarray([1.0, 1.0, 1.0])
 
+    def update_ground_truth(self):
+        self.update_state_from_pos()
+        self.pos += self.vel * C.DT
+        self.H_pos.append(np.copy(self.pos))
+
+    def update_estimates(self, vel_included_in_prediction=False):
+        if not vel_included_in_prediction:
+            self.update_state_from_pos_estimate()
+            self.pos_estimate += self.vel_estimate * C.DT
+
+        self.H_pos_estimate.append(np.copy(self.pos_estimate))
+
     def update_training(self):
         self.update_state_from_pos()
         self.pos_estimate = np.copy(self.pos)
@@ -134,7 +146,7 @@ class Drone():
         self.update_state_from_pos_estimate()
         self.pos_estimate += self.vel_estimate * C.DT
 
-        #self.H_pos_estimate.append(np.copy(self.pos_estimate)) # Don't want to draw the whole path in inference
+        # self.H_pos_estimate.append(np.copy(self.pos_estimate)) # Don't want to draw the whole path in inference
 
     def update_inference(self, vel_included_in_prediction=False):
         # Update ground truth
@@ -183,7 +195,8 @@ class Drone():
             var_y = 3 * std_y * self.var_y_factor
             var_z = 3 * std_z * self.var_z_factor
             # Plot the surface
-            ax.plot_surface(var_x + x, var_y + y, var_z + z, color=self.inference_color, alpha=C.DRONE_VARIANCE_TRANSPARENCY)
+            ax.plot_surface(var_x + x, var_y + y, var_z + z, color=self.inference_color,
+                            alpha=C.DRONE_VARIANCE_TRANSPARENCY)
 
 
 # Returns a value that is max(abs(max_a), abs(a+b))

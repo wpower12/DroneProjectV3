@@ -23,32 +23,35 @@ class MultiSwarmSim():
 
         self.intercept_module = None
 
+        self.timestep = 0
+
     def set_seed(self, n):
         self.wind.set_seed(n)
+
+    def apply_wind(self):
+        self.wind.sample_wind()
+        wind_dev = self.wind.get_wind_vec() * C.DT
+        if self.wind.gusting:
+            self.swarms.move_swarms(wind_dev)
 
     def tick(self):
         # Here add data to intercept module
         #self.intercept_module.observe_adversarial_uav()
         #self.intercept_module.update_friendly_swarm_trajectory()
-
         self.swarms.plot_all_swarms(self.ax)
-        self.wind.sample_wind()
 
-        wind_dev = self.wind.get_wind_vec() * C.DT
-        if self.wind.gusting:
-            self.swarms.move_swarms(wind_dev)
+        self.apply_wind()
 
         for s in self.swarms.swarms:
-            s.tick(self.wind)
+            s.tick()
+
+        if self.timestep == (C.NUM_TRAINING_STEPS - 1):
+            self.swarms.train()
 
         # Split tick into
         # Apply velocity to position
         # update_train_data
-
-    def start_inference(self, use_model=True):
-        for s in self.swarms.swarms:
-            s.training = False
-            s.use_model = use_model
+        self.timestep += 1
 
     def init_figure(self, figname):
         plt.ion()

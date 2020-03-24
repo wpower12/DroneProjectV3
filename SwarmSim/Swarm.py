@@ -23,10 +23,7 @@ class Swarm():
 
         self.drones = []
         self.training = True
-        self.use_model = True
 
-        # Global timestep counter
-        self.timestep = 0
         self.data_frame = PositionsHistoryDataFrame.PositionsHistoryDataFrame(self.N)
 
         self.swarm_mean = np.zeros(3)
@@ -76,7 +73,7 @@ class Swarm():
                 self.drones.append(d)
 
     #### "Public" Methods #########
-    def tick(self, wind):
+    def tick(self):
 
         if self.training:
             self.training_tick()
@@ -87,14 +84,10 @@ class Swarm():
         if not self.training:
             self.inference_tick()
 
-        # Data Gathering/Model Training
-        if self.use_structure is not None and self.training:
-
-            if self.timestep == C.NUM_TRAINING_STEPS - 1:  # >= C.NUM_TRAINING_STEPS - 1 to train each inf timestep
-                self.model.train(self.data_frame, self.use_structure)
-                # print('theta:', self.model.theta)
-
-        self.timestep += 1
+    def train(self):
+        if self.use_structure is not None:
+            self.model.train(self.data_frame, self.use_structure)
+            self.training = False
 
     def training_tick(self):
         for d in self.drones:
@@ -148,7 +141,7 @@ class Swarm():
             d.swarm_index = id
 
     def get_all_drone_locations(self):
-        if self.timestep < C.NUM_TRAINING_STEPS:
+        if self.training:
             return np.asarray([d.pos for d in self.drones])
         else:
             return np.asarray([d.pos_estimate for d in self.drones])
