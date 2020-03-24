@@ -5,7 +5,6 @@
 import numpy as np
 import random
 import warnings
-
 import Experiments.Exp01.Exp01SwarmSim as S
 import Experiments.Exp01.Exp01Animator as A
 import Experiments.Exp01.constantsExp01 as C

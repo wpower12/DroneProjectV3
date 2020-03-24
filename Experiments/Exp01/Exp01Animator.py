@@ -115,10 +115,10 @@ class Exp01Animator():
 
     def plot_targets(self, swarm):
         x, y, z = [], [], []
-
         for d in swarm.drones:
             x_d, y_d, z_d = d.target
             x.append(x_d)
             y.append(y_d)
             z.append(z_d)
+
         self.ax.plot(np.asarray(x), np.asarray(y), np.asarray(z), color='r', marker='+', markersize=self.markersize)
