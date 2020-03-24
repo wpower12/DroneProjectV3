@@ -1,6 +1,7 @@
 from . import SwarmCollection as SC
 from . import Wind  as W
 from . import constants as C
+from . import InterceptionModule as Intercept
 
 import matplotlib.pyplot as plt
 from mpl_toolkits import mplot3d
@@ -20,11 +21,16 @@ class MultiSwarmSim():
         self.wind = W.Wind(self.prng)
         self.ax = self.init_figure(figname)
 
+        self.intercept_module = None
 
     def set_seed(self, n):
         self.wind.set_seed(n)
 
     def tick(self):
+        # Here add data to intercept module
+        #self.intercept_module.observe_adversarial_uav()
+        #self.intercept_module.update_friendly_swarm_trajectory()
+
         self.swarms.plot_all_swarms(self.ax)
         self.wind.sample_wind()
 
@@ -34,6 +40,10 @@ class MultiSwarmSim():
 
         for s in self.swarms.swarms:
             s.tick(self.wind)
+
+        # Split tick into
+        # Apply velocity to position
+        # update_train_data
 
     def start_inference(self, use_model=True):
         for s in self.swarms.swarms:
