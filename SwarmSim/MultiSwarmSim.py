@@ -25,6 +25,10 @@ class MultiSwarmSim():
 
         self.timestep = 0
 
+    def init_intercept_module(self):
+        if self.intercept_module is None:
+            self.intercept_module = Intercept.InterceptionModule(self.swarms.swarms[0], self.swarms.swarms[1])
+
     def set_seed(self, n):
         self.wind.set_seed(n)
 
@@ -36,8 +40,10 @@ class MultiSwarmSim():
 
     def tick(self):
         # Here add data to intercept module
-        #self.intercept_module.observe_adversarial_uav()
-        #self.intercept_module.update_friendly_swarm_trajectory()
+        if self.intercept_module is not None:
+            self.intercept_module.observe_adversarial_uav()
+            #self.intercept_module.update_friendly_swarm_trajectory()
+
         self.swarms.plot_all_swarms(self.ax)
 
         self.apply_wind()

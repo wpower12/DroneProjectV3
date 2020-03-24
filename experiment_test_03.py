@@ -75,6 +75,7 @@ for n in range(C.NUM_RUNS):
     np.random.seed = rnd_seed
     sim = MultiSwarmSim(multiswarm_options, rnd_seed, 'Temporal GCRF')
     sim.set_seed(rnd_seed)
+    sim.init_intercept_module()
     for i in range(C.NUM_TRAINING_STEPS+C.NUM_INFERENCE_STEPS):
         sim.tick()
 
