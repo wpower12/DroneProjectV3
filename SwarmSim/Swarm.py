@@ -136,6 +136,18 @@ class Swarm():
             d.target = d.pos_initial + delta
         # d.init_PIDs()
 
+    def set_swarm_target_from_new_center(self, new_center):
+        # Get current 'center' of swarm
+        pos = np.asarray([d.pos for d in self.drones])
+        center = np.mean(pos, axis=0)
+
+        # Get deltas to current center for each drone
+        deltas = np.asarray([center-d.pos for d in self.drones])
+
+        # Update target for each drone:
+        for d in self.drones:
+            d.target = new_center+d.pos
+
     def set_swarm_pos_relative(self, dpos):
         delta = np.asarray(dpos)
         for d in self.drones:
@@ -170,9 +182,9 @@ class Swarm():
                     curr_S[j][i] = curr_S[i][j]
 
         # Threshold S
-        curr_S = curr_S / np.max(curr_S)
-        curr_S = 1.0 - curr_S
-
+        # TODO - UNCOMMENT THIS AND FIGURE OUT WHY ITS DIV BY 0
+        # curr_S = curr_S / np.max(curr_S)
+        # curr_S = 1.0 - curr_S
         return curr_S
 
     def update_data(self):

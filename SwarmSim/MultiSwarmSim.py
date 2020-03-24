@@ -7,7 +7,7 @@ import numpy as np
 import time
 
 class MultiSwarmSim():
-    def __init__(self, swarms_options, rnd_seed, figname):
+    def __init__(self, swarms_options, rnd_seed,  figname, animator=None):
         # Assuming swarms holds a list of swarms:
         # [[num_drones, type, plot_color, inital_position, target],..,[...]]
         self.prng = np.random.RandomState(rnd_seed)
@@ -17,6 +17,9 @@ class MultiSwarmSim():
         self.swarms.generate_animator(figname)
 
         self.wind = W.Wind(self.prng)
+
+        if animator:
+            self.anm = animator
 
     def set_seed(self, n):
         self.wind.set_seed(n)

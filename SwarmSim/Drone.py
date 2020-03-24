@@ -82,8 +82,11 @@ class Drone():
         n_vel_y = clamp_add(self.vel[1], self.acc[1] * C.DT, C.MAX_VEL)
         n_vel_z = clamp_add(self.vel[2], self.acc[2] * C.DT, C.MAX_VEL)
 
-        # self.vel = np.asarray([n_vel_x, n_vel_y, n_vel_z])
-        # self.vel /= np.linalg.norm(self.vel)
+        # if self.hard_vel == None:
+        #     self.vel = np.asarray([n_vel_x, n_vel_y, n_vel_z])
+        #     self.vel /= np.linalg.norm(self.vel)
+        # else:
+        #     self.vel = self.hard_vel
 
         if self.swarm_index == 1:
             self.vel = np.asarray([1.0, 1.0, 1.0])
